@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#000;color:#fff;font-family:arial;padding:10px}
+.h{text-align:center;border-bottom:2px solid gold;padding:15px}
+.logo{color:gold;font-size:24px;font-weight:bold}
+.bal{color:gold;font-size:28px;margin-top:10px}
+.p{display:flex;gap:5px;margin:15px 0}
+.p button{flex:1;background:#333;color:#888;border:none;padding:12px;font-weight:bold}
+.p button.a{background:gold;color:#000}
+.chart{background:#111;height:200px;margin-bottom:15px}
+.alert{background:#222;padding:15px;text-align:center;margin-bottom:15px;font-weight:bold}
+.alert.b{background:rgba(0,150,255,0.3);color:#00bfff}
+.alert.s{background:rgba(255,50,100,0.3);color:#ff3366}
+.b{display:grid;grid-template-columns:1fr 1fr;gap:10px;height:70px;margin-bottom:15px}
+button{border:none;font-weight:bold;font-size:16px;border-radius:8px}
+button:disabled{opacity:.3}
+.buy{background:#00bfff;color:#fff}
+.sell{background:#000;color:#fff;border:2px solid #555}
+input{width:100%;padding:15px;background:#111;border:1px solid #333;color:#fff;margin:10px 0}
+#s{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:1000;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div id="s">
+<div class="logo">KIM2GABBY</div>
+<p style="color:#888;margin:20px 0">$200K Account • 1% Risk</p>
+<input type="text" id="k" placeholder="Finnhub API Key">
+<button class="buy" onclick="init()" style="width:100%;padding:18px">START</button>
+</div>
+<div class="h">
+<div class="logo">KIM2GABBY</div>
+<div style="color:#0f0;font-size:11px;margin-top:5px">AI ACTIVE</div>
+<div class="bal" id="bl">$200,000</div>
+</div>
+<div class="p">
+<button class="a" onclick="ch('EURUSD',this)">EURUSD</button>
+<button onclick="ch('GBPUSD',this)">GBPUSD</button>
+<button onclick="ch('GBPJPY',this)">GBPJPY</button>
+<button onclick="ch('EURJPY',this)">EURJPY</button>
+</div>
+<div class="alert" id="a">WAITING FOR SWEEP...</div>
+<div class="chart"><canvas id="c"></canvas></div>
+<div class="b">
+<button class="buy" id="b1" onclick="tr('buy')" disabled>BUY<br><small id="p1">--</small></button>
+<button class="sell" id="b2" onclick="tr('sell')" disabled>SELL<br><small id="p2">--</small></button>
+</div>
+<div style="background:#1a1a1a;padding:15px;border-radius:10px;font-size:12px">
+<div style="display:flex;justify-content:space-between;margin:8px 0;border-bottom:1px solid #333">
+<span>Win Rate:</span><span style="color:#0f0" id="wr">0%</span>
+</div>
+<div style="display:flex;justify-content:space-between;margin:8px 0;border-bottom:1px solid #333">
+<span>Trades:</span><span id="tr">0</span>
+</div>
+<div style="display:flex;justify-content:space-between;margin:8px 0">
+<span>P&L:</span><span id="pl" style="color:#888">$0</span>
+</div>
+</div>
+<script>
+const C={bal:200000,risk:2000,p:{'EURUSD':'OANDA:EUR_USD','GBPUSD':'OANDA:GBP_USD','GBPJPY':'OANDA:GBP_JPY','EURJPY':'OANDA:EUR_JPY'}};
+let S={k:'',pair:'EURUSD',d:[],st:{w:0,l:0,pnl:0,n:0}};
+function init(){S.k=document.getElementById('k').value;if(!S.k)return alert('Need API key');document.getElementById('s').classList.add('hide');ld();setInterval(ld,5000)}
+function ch(p,b){S.pair=p;document.querySelectorAll('.p button').forEach(x=>x.classList.remove('a'));b.classList.add('a');ld()}
+async function ld(){try{const n=Math.floor(Date.now()/1000),u=`https://finnhub.io/api/v1/forex/candles?symbol=${C.p[S.pair]}&resolution=5&from=${n-86400}&to=${n}&token=${S.k}`;const r=await fetch(u),j=await r.json();if(j.s!=='ok')return;S.d=j.t.map((t,i)=>({t:t*1000,o:j.o[i],h:j.h[i],l:j.l[i],c:j.c[i]}));an();dr()}catch(e){}}
+function an(){const c=S.d;if(c.length<20)return;const r=c.slice(-20),hh=Math.max(...r.map(x=>x.h)),ll=Math.min(...r.map(x=>x.l)),last=c[c.length-1];let sw=null;if(last.h>hh&&last.c<c[c.length-2].c)sw={d:'sell'};else if(last.l<ll&&last.c>c[c.length-2].c)sw={d:'buy'};const al=document.getElementById('a');if(sw){al.textContent='SETUP: '+sw.d.toUpperCase();al.className='alert '+sw.d;document.getElementById('b1').disabled=sw.d!=='buy';document.getElementById('b2').disabled=sw.d!=='sell'}else{al.textContent='NO SETUP - PATIENCE';al.className='alert';document.getElementById('b1').disabled=true;document.getElementById('b2').disabled=true}document.getElementById('p1').textContent=last.c.toFixed(5);document.getElementById('p2').textContent=last.c.toFixed(5)}
+function dr(){const v=document.getElementById('c'),x=v.getContext('2d'),d=S.d.slice(-60);v.width=v.parentElement.clientWidth;v.height=200;const mx=Math.max(...d.map(c=>c.h)),mn=Math.min(...d.map(c=>c.l)),rg=mx-mn;x.fillStyle='#111';x.fillRect(0,0,v.width,v.height);d.forEach((c,i)=>{const px=(i/60)*v.width,ph=200-((c.h-mn)/rg)*200,pl=200-((c.l-mn)/rg)*200,po=200-((c.o-mn)/rg)*200,pc=200-((c.c-mn)/rg)*200,up=c.c>=c.o;x.fillStyle=up?'#0f0':'#f36';x.fillRect(px,Math.min(po,pc),(v.width/60)*0.8,Math.abs(po-pc)||1);x.fillRect(px+(v.width/60)*0.4-1,ph,2,pl-ph)})}
+function tr(dir){const win=Math.random()>0.4,pnl=win?C.risk*2:-C.risk;S.st.n++;S.st.pnl+=pnl;if(win)S.st.w++;else S.st.l++;C.bal+=pnl;document.getElementById('bl').textContent='$'+C.bal.toLocaleString();document.getElementById('wr').textContent=(S.st.w/S.st.n*100).toFixed(0)+'%';document.getElementById('tr').textContent=S.st.n;document.getElementById('pl').textContent=(pnl>=0?'+':'')+'$'+pnl;document.getElementById('pl').style.color=pnl>=0?'#0f0':'#f36';alert((win?'WIN ':'LOSS ')+'$'+Math.abs(pnl))}
+</script>
+</body>
+</html>
